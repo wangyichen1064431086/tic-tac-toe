@@ -22,18 +22,6 @@ class Board extends React.Component {
     }
   }
   */
-  handleClick(i) {
-    const squares = this.state.squares.slice();//slice()方法返回一个从开始到结束选择的数组的一部分浅拷贝到一个新数组对象。原始数组不会被修改。
-    if (calculateWinner(squares) || squares[i]) {
-      return;
-    }
-    squares[i] = this.state.xIsNext ? 'X':'O';
-    this.setState({
-      squares: squares,
-      xIsNext: !this.state.xIsNext
-    });
-  }
-
   renderSquare(i) {
     return (
       <Square 
@@ -44,19 +32,8 @@ class Board extends React.Component {
   }
 
   render() {
-    const winner = calculateWinner(this.state.squares);
-    let status;
-    if (winner) {
-      status = 'Winner: ' + winner;
-    } else {
-      status = `Next player: ${this.state.xIsNext ? 'X' : 'O'}`;
-    }
-
     return (
       <div>
-        <div className="status">
-          {status}
-        </div>
         <div className="board-row">
           {this.renderSquare(0)}
           {this.renderSquare(1)}
@@ -78,20 +55,62 @@ class Board extends React.Component {
 }
 
 class Game extends React.Component {
+
   constructor(props) {
     super(props);
     this.state = {
       history: [{
         squares: Array(9).fill(null)
       }],
+      stepNumber:0,//用于标识现在显示的是第几步
       xIsNext: true
     };
   }
 
-  render() {
+  handleClick(i) {
     const history = this.state.history;
     const current = history[history.length - 1];
-    const winner = calculateWinner(current.squares);
+    const squares = current.squares.slice();//slice()方法返回一个从开始到结束选择的数组的一部分浅拷贝到一个新数组对象。原始数组不会被修改。
+    if (calculateWinner(squares) || squares[i]) {//如果已经决出胜负了，且当前点击的square即squares[i]有值，那么就可以直接return了
+      return;
+    }
+    squares[i] = this.state.xIsNext ? 'X' : 'O';//给当前点击的square即squares[i]赋值，如果下一步是'X'就给出值'X'，如果下一步是'O'就给出'O'
+    this.setState({
+      history: history.concat([{// Note:Array.prototype.concat(): 此方法用于合并两个或多个数组。此方法不会更改现有数组，而是返回一个新数组。
+        //给state的history数组添加新的一项,即把当前最后一项的squares再添加一次到最后
+
+        squares:squares,
+      }]),
+      stepNumber: history.length,
+      xIsNext: !this.state.xIsNext
+    });
+  }
+
+  jumpTo(step) {
+    this.setState({
+      stepNumber: step,
+      xIsNext: (step % 2) === 0 //step为偶数时下一步为X
+    });
+  }
+
+  render() {
+    const history = this.state.history;
+    const current = history[this.state.stepNumber];
+    const winner = calculateWinner(current.squares);//计算赢家
+
+    const moves= history.map((step,move) => {
+      //NOTE：Array.prototype.map(function callback(currentValue, index))
+      const desc = move ? 'Go to move #' + move : 'Go to game start';
+      return (
+        <li key={move}>
+          <button 
+            onClick = {() => this.jumpTo(move)}
+          >
+            {desc}
+          </button>
+        </li>
+      )
+    });
 
     let status;
     if (winner) {
@@ -103,11 +122,14 @@ class Game extends React.Component {
     return (
       <div className="game">
         <div className="game-board">
-          <Board />
+          <Board 
+            squares={current.squares}
+            onClick={(i) => this.handleClick(i)}
+          />
         </div>
         <div className="game-info">
-          <div>{/* status */} </div>
-          <ol>{/* TODO */} </ol>
+          <div>{status} </div>
+          <ol>{moves} </ol>
         </div>
       </div>
     );
